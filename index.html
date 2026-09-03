@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>6-Max GTO 隨機發牌模擬器 (含 EV 計算)</title>
+    <title>6-Max GTO 全流程手牌模擬器</title>
     <style>
         :root {
             --bg-dark: #0d1117;
@@ -24,11 +24,11 @@
         .logo { font-weight: 800; font-size: 0.95rem; color: var(--accent-blue); }
         .score-badge { background: var(--panel-bg); border: 1px solid var(--panel-border); padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; }
 
-        .app-container { display: flex; flex-direction: column; gap: 12px; padding: 12px; max-width: 600px; margin: 0 auto; width: 100%; }
+        .app-container { display: flex; flex-direction: column; gap: 10px; padding: 12px; max-width: 600px; margin: 0 auto; width: 100%; }
 
         /* 模式切換 */
         .mode-selector { display: flex; background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 8px; padding: 3px; gap: 4px; }
-        .mode-btn { flex: 1; padding: 8px; border: none; background: transparent; color: var(--text-sub); font-weight: bold; font-size: 0.85rem; border-radius: 6px; cursor: pointer; text-align: center; }
+        .mode-btn { flex: 1; padding: 8px; border: none; background: transparent; color: var(--text-sub); font-weight: bold; font-size: 0.82rem; border-radius: 6px; cursor: pointer; text-align: center; }
         .mode-btn.active { background: var(--accent-blue); color: white; }
 
         /* 牌桌 */
@@ -37,8 +37,8 @@
             border: 8px solid #2d1810;
             border-radius: 100px;
             position: relative;
-            height: 290px;
-            margin: 6px 0;
+            height: 280px;
+            margin: 4px 0;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -93,41 +93,40 @@
         .bubble-sb  { bottom: 42px; left: 20%; }
         .bubble-bb  { top: 40%; left: 76px; }
 
-        .center-pot { position: absolute; top: 28%; background: rgba(0,0,0,0.8); padding: 3px 10px; border-radius: 10px; font-size: 0.8rem; font-weight: bold; color: var(--accent-yellow); border: 1px solid rgba(255,255,255,0.1); }
-        .community-cards { position: absolute; top: 48%; display: flex; gap: 4px; }
+        .center-pot { position: absolute; top: 25%; background: rgba(0,0,0,0.8); padding: 3px 10px; border-radius: 10px; font-size: 0.8rem; font-weight: bold; color: var(--accent-yellow); border: 1px solid rgba(255,255,255,0.1); }
+        .stage-indicator { position: absolute; top: 10%; font-size: 0.75rem; color: #8b949e; font-weight: bold; letter-spacing: 1px; }
+        .community-cards { position: absolute; top: 46%; display: flex; gap: 4px; }
 
         /* 撲克牌 */
         .card { width: 34px; height: 48px; background: #fff; border-radius: 4px; color: #111; display: flex; flex-direction: column; justify-content: space-between; padding: 2px 3px; font-weight: 800; font-size: 0.8rem; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
         .card.red { color: #d32f2f; }
 
-        .hero-section { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 6px; }
+        .hero-section { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 4px; }
         .hero-cards { display: flex; gap: 6px; }
 
-        .action-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
-        .btn-act { padding: 12px 6px; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: bold; color: white; cursor: pointer; text-align: center; }
+        /* 動作按鈕區 */
+        .action-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 6px; }
+        .btn-wrapper { display: flex; flex-direction: column; gap: 2px; }
+        .ev-badge { font-size: 0.7rem; text-align: center; color: var(--text-sub); font-weight: bold; }
+        .btn-act { padding: 10px 4px; border: none; border-radius: 8px; font-size: 0.82rem; font-weight: bold; color: white; cursor: pointer; text-align: center; }
         .btn-fold { background: #2f81f7; }
         .btn-call { background: #d29922; }
         .btn-raise { background: #da3633; }
 
-        .analysis-box { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 8px; padding: 12px; display: none; flex-direction: column; gap: 8px; margin-top: 10px; }
+        /* 分析面板 */
+        .analysis-box { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 8px; padding: 12px; display: none; flex-direction: column; gap: 8px; margin-top: 6px; }
         .analysis-box.show { display: flex; }
-        .result-title { font-weight: bold; font-size: 0.95rem; }
+        .result-title { font-weight: bold; font-size: 0.92rem; }
         .result-title.correct { color: #3fb950; }
         .result-title.wrong { color: #f85149; }
 
-        /* EV 比較表格 */
-        .ev-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 0.82rem; }
-        .ev-table th, .ev-table td { border: 1px solid var(--panel-border); padding: 6px; text-align: center; }
-        .ev-table th { background: #21262d; color: var(--text-sub); }
-        .ev-highlight { color: #3fb950; font-weight: bold; }
-
-        .next-btn { background: var(--accent-blue); color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 6px; }
+        .next-btn { background: var(--accent-blue); color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 4px; }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="logo">🎲 6-Max GTO 訓練器 (含 EV)</div>
+        <div class="logo">🎲 6-Max GTO 全流程手牌模擬器</div>
         <div class="score-badge">正確率：<span id="accuracy-val" style="color:#3fb950;">100%</span></div>
     </header>
 
@@ -135,11 +134,13 @@
 
         <!-- 模式切換器 -->
         <div class="mode-selector">
-            <button class="mode-btn active" id="mode-all" onclick="setMode('all')">全階段隨機</button>
+            <button class="mode-btn active" id="mode-all" onclick="setMode('all')">完整打完一手牌 ♠️</button>
             <button class="mode-btn" id="mode-preflop" onclick="setMode('preflop')">🔥 只練翻前 (Pre-flop)</button>
         </div>
 
         <div class="table-area">
+            <div class="stage-indicator" id="stage-text">PRE-FLOP</div>
+            
             <div class="seat pos-utg" id="seat-utg">UTG</div>
             <div class="seat pos-hj"  id="seat-hj">HJ</div>
             <div class="seat pos-co"  id="seat-co">CO</div>
@@ -159,7 +160,7 @@
         </div>
 
         <div class="hero-section">
-            <div style="font-size:0.75rem; color:var(--text-sub);" id="hero-pos-text">Hero 手牌</div>
+            <div style="font-size:0.75rem; color:var(--text-sub);" id="hero-pos-text">Hero 位置：-</div>
             <div class="hero-cards" id="hero-hand-display"></div>
         </div>
 
@@ -167,28 +168,8 @@
 
         <div class="analysis-box" id="analysis-box">
             <div class="result-title" id="result-title"></div>
-            <div id="reason-text" style="font-size:0.85rem; line-height:1.4; color:#c9d1d9;"></div>
-            
-            <table class="ev-table">
-                <thead>
-                    <tr>
-                        <th>動作</th>
-                        <th>棄牌 (Fold)</th>
-                        <th>跟注 (Call)</th>
-                        <th>加注 (Raise)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><b>期望值 (EV)</b></td>
-                        <td id="ev-fold">0.00 BB</td>
-                        <td id="ev-call">0.00 BB</td>
-                        <td id="ev-raise">0.00 BB</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <button class="next-btn" onclick="generateRandomScenario()">生成下一手牌局 🎲</button>
+            <div id="reason-text" style="font-size:0.82rem; line-height:1.4; color:#c9d1d9;"></div>
+            <button class="next-btn" id="next-step-btn" onclick="nextStepOrHand()">繼續下一街 ➡️</button>
         </div>
 
     </div>
@@ -205,8 +186,8 @@
         const rankValues = { '2':2, '3':3, '4':4, '5':5, '6':6, '7':7, '8':8, '9':9, '10':10, 'J':11, 'Q':12, 'K':13, 'A':14 };
         const positions = ['utg', 'hj', 'co', 'btn', 'sb', 'bb'];
 
-        let currentMode = 'all';
-        let currentScenario = null;
+        let currentMode = 'all'; // 'all' 或 'preflop'
+        let gameState = null;
         let totalPlayed = 0;
         let totalCorrect = 0;
 
@@ -214,106 +195,98 @@
             currentMode = mode;
             document.getElementById('mode-all').className = mode === 'all' ? 'mode-btn active' : 'mode-btn';
             document.getElementById('mode-preflop').className = mode === 'preflop' ? 'mode-btn active' : 'mode-btn';
-            generateRandomScenario();
+            startNewHand();
         }
 
-        function generateRandomScenario() {
-            try {
-                let deck = [];
-                for (let r of ranks) {
-                    for (let s of suits) {
-                        deck.push({ r, s });
-                    }
+        // 開始全新一手牌
+        function startNewHand() {
+            let deck = [];
+            for (let r of ranks) {
+                for (let s of suits) {
+                    deck.push({ r, s });
                 }
-                deck.sort(() => Math.random() - 0.5);
+            }
+            deck.sort(() => Math.random() - 0.5);
 
-                const heroHand = [deck.pop(), deck.pop()];
-                
-                let boardCount = 0;
-                if (currentMode === 'all') {
-                    boardCount = [0, 3, 4, 5][Math.floor(Math.random() * 4)];
-                }
-                
-                const board = [];
-                for (let i = 0; i < boardCount; i++) {
-                    board.push(deck.pop());
-                }
+            const heroHand = [deck.pop(), deck.pop()];
+            const villainHand = [deck.pop(), deck.pop()];
+            
+            const heroPos = positions[Math.floor(Math.random() * positions.length)];
+            let villainPos = positions[Math.floor(Math.random() * positions.length)];
+            while (villainPos === heroPos) {
+                villainPos = positions[Math.floor(Math.random() * positions.length)];
+            }
 
-                const heroPos = positions[Math.floor(Math.random() * positions.length)];
-                let villainPos = positions[Math.floor(Math.random() * positions.length)];
-                while (villainPos === heroPos) {
-                    villainPos = positions[Math.floor(Math.random() * positions.length)];
-                }
+            gameState = {
+                deck,
+                heroHand,
+                villainHand,
+                heroPos,
+                villainPos,
+                board: [],
+                stage: 'preflop', // 'preflop', 'flop', 'turn', 'river', 'showdown'
+                pot: 1.5, // 包含 SB (0.5) + BB (1.0)
+                currentBet: 0,
+                isHandOver: false,
+                lastActionText: ''
+            };
 
-                let basePot = 1.5; 
-                let betAmount = 0;
-                let isAllIn = false;
+            processStageStart();
+        }
 
-                if (boardCount === 0) {
-                    const rand = Math.random();
-                    if (rand < 0.5) {
-                        betAmount = 2.5;
-                    } else if (rand < 0.85) {
-                        betAmount = 7.5;
-                    } else {
-                        betAmount = 20.0;
-                        isAllIn = true;
-                    }
-                } else {
-                    const potAdd = (Math.floor(Math.random() * 30) + 2) * 0.5;
-                    basePot += potAdd;
-                    const betType = Math.random();
-                    if (betType < 0.4) {
-                        betAmount = (basePot * 0.33).toFixed(1);
-                    } else if (betType < 0.8) {
-                        betAmount = (basePot * 0.75).toFixed(1);
-                    } else {
-                        betAmount = (basePot * 3.0).toFixed(1);
-                        isAllIn = true;
-                    }
-                }
+        // 每個階段開始時處理對手動作
+        function processStageStart() {
+            if (gameState.stage === 'flop' && gameState.board.length === 0) {
+                gameState.board.push(gameState.deck.pop(), gameState.deck.pop(), gameState.deck.pop());
+            } else if ((gameState.stage === 'turn' || gameState.stage === 'river') && gameState.board.length < (gameState.stage === 'turn' ? 4 : 5)) {
+                gameState.board.push(gameState.deck.pop());
+            }
 
-                const pot = parseFloat((basePot + parseFloat(betAmount)).toFixed(1));
-                const evMap = calculateEV(heroHand, board, isAllIn, heroPos, pot, parseFloat(betAmount));
+            // AI (Villain) 根據當前情況動態決策
+            const villainAction = getAIAction(gameState);
+            gameState.currentBet = villainAction.bet;
+            gameState.pot += villainAction.bet;
+            gameState.villainLastAction = villainAction.type;
 
-                // 決定最佳決策（取最高 EV 者）
-                let bestAction = "Fold";
-                if (evMap.Call >= evMap.Fold && evMap.Call >= evMap.Raise) bestAction = "Call";
-                if (evMap.Raise >= evMap.Fold && evMap.Raise >= evMap.Call) bestAction = "Raise";
-                if (evMap.Fold > evMap.Call && evMap.Fold > evMap.Raise) bestAction = "Fold";
+            renderUI();
+        }
 
-                currentScenario = { heroPos, villainPos, pot, betAmount, isAllIn, heroHand, board, bestAction, evMap };
-                renderUI(currentScenario);
-            } catch (e) {
-                console.error("生成牌局失敗:", e);
-                setTimeout(generateRandomScenario, 100);
+        // 簡單 GTO 對手 AI 邏輯
+        function getAIAction(gs) {
+            const rand = Math.random();
+            if (gs.stage === 'preflop') {
+                if (rand < 0.4) return { type: 'Raise', bet: 2.5 };
+                if (rand < 0.7) return { type: '3-Bet', bet: 7.5 };
+                return { type: 'Check/Call', bet: 0 };
+            } else {
+                if (rand < 0.45) return { type: 'Check', bet: 0 };
+                if (rand < 0.8) return { type: 'Bet', bet: parseFloat((gs.pot * 0.5).toFixed(1)) };
+                return { type: 'Overbet', bet: parseFloat((gs.pot * 1.2).toFixed(1)) };
             }
         }
 
-        /* 算牌與 EV 動態計算引擎 */
-        function calculateEV(hand, board, isAllIn, heroPos, pot, betAmount) {
-            const h1 = rankValues[hand[0].r] || 2;
-            const h2 = rankValues[hand[1].r] || 2;
+        // 計算動態 EV
+        function calculateEV(gs) {
+            const h1 = rankValues[gs.heroHand[0].r] || 2;
+            const h2 = rankValues[gs.heroHand[1].r] || 2;
             const isPair = h1 === h2;
             const highCard = Math.max(h1, h2);
-            
-            // 估算估值權重 (0.00 ~ 1.00)
+
             let equity = (highCard / 14) * 0.45;
             if (isPair) equity += 0.35;
-            if (hand[0].s.code === hand[1].s.code) equity += 0.08;
+            if (gs.heroHand[0].s.code === gs.heroHand[1].s.code) equity += 0.08;
 
-            const evFold = 0.0; // 棄牌基準 EV 設為 0
-            let evCall = (equity * pot) - ((1 - equity) * betAmount);
-            let evRaise = (equity * (pot + betAmount * 2)) - ((1 - equity) * betAmount * 2.5);
-
-            if (isAllIn) {
-                evRaise = -999.0; // 面對 All-in 無法 Raise
-            }
+            const toCall = gs.currentBet;
+            const evFold = 0.0;
+            const evCall = parseFloat(((equity * (gs.pot + toCall)) - ((1 - equity) * toCall)).toFixed(2));
+            const evRaise = parseFloat(((equity * (gs.pot + toCall * 3)) - ((1 - equity) * toCall * 2.5)).toFixed(2));
 
             return {
-                Fold: parseFloat(evFold.toFixed(2)),
-                Call: parseFloat(evCall.toFixed(2)),
-                Raise: parseFloat(evRaise.toFixed(2))
+                Fold: evFold,
+                Call: evCall,
+                Check: evCall, // 面對 0Bet 時 Call 即 Check
+                Raise: evRaise,
+                Bet: evRaise
             };
         }
 
@@ -326,114 +299,150 @@
             </div>`;
         }
 
-        function renderUI(sc) {
+        function renderUI() {
+            const gs = gameState;
+            document.getElementById('stage-text').innerText = gs.stage.toUpperCase();
+
+            // 重置桌面上所有標籤
             positions.forEach(p => {
                 const seat = document.getElementById(`seat-${p}`);
                 if (seat) seat.className = `seat pos-${p}`;
-                
                 const b = document.getElementById(`bubble-${p}`);
-                if (b) {
-                    b.className = `bet-bubble bubble-${p}`;
-                    b.innerText = '';
-                }
+                if (b) { b.className = `bet-bubble bubble-${p}`; b.innerText = ''; }
             });
 
+            // SB / BB 盲注標示
             const sbBubble = document.getElementById('bubble-sb');
             const bbBubble = document.getElementById('bubble-bb');
-            
-            if (sbBubble && sc.villainPos !== 'sb' && sc.heroPos !== 'sb') {
-                sbBubble.innerText = 'SB: 0.5BB';
-                sbBubble.classList.add('show', 'blind');
-            }
-            if (bbBubble && sc.villainPos !== 'bb' && sc.heroPos !== 'bb') {
-                bbBubble.innerText = 'BB: 1BB';
-                bbBubble.classList.add('show', 'blind');
-            }
+            if (sbBubble && gs.villainPos !== 'sb' && gs.heroPos !== 'sb') { sbBubble.innerText = 'SB: 0.5BB'; sbBubble.classList.add('show', 'blind'); }
+            if (bbBubble && gs.villainPos !== 'bb' && gs.heroPos !== 'bb') { bbBubble.innerText = 'BB: 1BB'; bbBubble.classList.add('show', 'blind'); }
 
-            const heroSeat = document.getElementById(`seat-${sc.heroPos}`);
-            if (heroSeat) heroSeat.classList.add('hero');
+            // 高亮 Hero & Villain
+            document.getElementById(`seat-${gs.heroPos}`)?.classList.add('hero');
+            document.getElementById(`seat-${gs.villainPos}`)?.classList.add('villain');
 
-            const villainSeat = document.getElementById(`seat-${sc.villainPos}`);
-            if (villainSeat) villainSeat.classList.add('villain');
-
-            const vBubble = document.getElementById(`bubble-${sc.villainPos}`);
+            // 對手動作 Bubble
+            const vBubble = document.getElementById(`bubble-${gs.villainPos}`);
             if (vBubble) {
-                vBubble.innerText = sc.isAllIn ? `下注 ${sc.betAmount} BB [全押]` : `下注 ${sc.betAmount} BB`;
+                vBubble.innerText = gs.currentBet > 0 ? `${gs.villainLastAction} ${gs.currentBet} BB` : `Check (看牌)`;
                 vBubble.classList.remove('blind');
                 vBubble.classList.add('show');
-                if (sc.isAllIn) vBubble.classList.add('allin');
             }
 
-            document.getElementById('pot-display').innerText = `底池: ${sc.pot} BB`;
-            document.getElementById('hero-pos-text').innerText = `Hero 位置：${sc.heroPos.toUpperCase()}`;
+            document.getElementById('pot-display').innerText = `底池: ${gs.pot.toFixed(1)} BB`;
+            document.getElementById('hero-pos-text').innerText = `Hero 位置：${gs.heroPos.toUpperCase()}`;
 
-            document.getElementById('board-display').innerHTML = sc.board.length > 0 
-                ? sc.board.map(c => renderCard(c)).join('') 
+            // 公共牌渲染
+            document.getElementById('board-display').innerHTML = gs.board.length > 0 
+                ? gs.board.map(c => renderCard(c)).join('') 
                 : '<span style="color:var(--text-sub); font-size:0.75rem;">(翻前 Pre-Flop)</span>';
 
-            document.getElementById('hero-hand-display').innerHTML = sc.heroHand.map(c => renderCard(c)).join('');
+            // Hero 手牌
+            document.getElementById('hero-hand-display').innerHTML = gs.heroHand.map(c => renderCard(c)).join('');
 
+            // 按鈕與動態 EV 渲染
+            const evMap = calculateEV(gs);
             const btnBox = document.getElementById('action-controls');
             btnBox.innerHTML = '';
 
-            const actions = [
-                { label: "棄牌 (Fold)", action: "Fold", type: "btn-fold" },
-                { label: `跟注 (${sc.betAmount}BB)`, action: "Call", type: "btn-call" },
-                { label: "加注 (Raise)", action: "Raise", type: "btn-raise" }
-            ];
+            let actions = [];
+            if (gs.currentBet === 0) {
+                actions = [
+                    { label: "看牌 (Check)", action: "Check", ev: evMap.Check, type: "btn-fold" },
+                    { label: "下注 (Bet 2.5BB)", action: "Bet", ev: evMap.Bet, type: "btn-raise" }
+                ];
+            } else {
+                actions = [
+                    { label: "棄牌 (Fold)", action: "Fold", ev: evMap.Fold, type: "btn-fold" },
+                    { label: `跟注 (${gs.currentBet}BB)`, action: "Call", ev: evMap.Call, type: "btn-call" },
+                    { label: "加注 (Raise)", action: "Raise", ev: evMap.Raise, type: "btn-raise" }
+                ];
+            }
 
             actions.forEach(act => {
+                const wrap = document.createElement('div');
+                wrap.className = 'btn-wrapper';
+                
+                const evBadge = document.createElement('div');
+                evBadge.className = 'ev-badge';
+                evBadge.innerText = `EV: ${act.ev > 0 ? '+' : ''}${act.ev} BB`;
+
                 const btn = document.createElement('button');
                 btn.className = `btn-act ${act.type}`;
                 btn.innerText = act.label;
-                btn.onclick = () => evaluateUserChoice(act.action);
-                btnBox.appendChild(btn);
+                btn.onclick = () => handleUserAction(act.action, act.ev, evMap);
+
+                wrap.appendChild(evBadge);
+                wrap.appendChild(btn);
+                btnBox.appendChild(wrap);
             });
 
             document.getElementById('analysis-box').classList.remove('show');
         }
 
-        function evaluateUserChoice(userAction) {
+        // 處理玩家點擊決策
+        function handleUserAction(userAction, userEV, evMap) {
             totalPlayed++;
-            const sc = currentScenario;
+            const gs = gameState;
+
+            // 尋找最高 EV 決策
+            let bestAction = userAction;
+            let maxEV = -999;
+            Object.keys(evMap).forEach(k => {
+                if (evMap[k] > maxEV) {
+                    maxEV = evMap[k];
+                    bestAction = k;
+                }
+            });
+
+            const isCorrect = userAction === bestAction || (userEV >= maxEV - 0.1);
+            if (isCorrect) totalCorrect++;
+
             const box = document.getElementById('analysis-box');
             const title = document.getElementById('result-title');
             const reason = document.getElementById('reason-text');
+            const nextBtn = document.getElementById('next-step-btn');
 
-            if (userAction === sc.bestAction) {
-                totalCorrect++;
+            if (isCorrect) {
                 title.className = "result-title correct";
-                title.innerHTML = `✓ 正確的 GTO 決策！(最高 EV: ${sc.evMap[sc.bestAction]} BB)`;
+                title.innerHTML = `✓ 正確決策！(${userAction} EV: ${userEV} BB)`;
             } else {
                 title.className = "result-title wrong";
-                title.innerHTML = `✕ 決策偏差！建議選擇：${sc.bestAction} (最高 EV: ${sc.evMap[sc.bestAction]} BB)`;
+                title.innerHTML = `✕ 決策偏差！建議：${bestAction} (最高 EV: ${maxEV} BB)`;
             }
 
-            const stageText = sc.board.length === 0 ? "翻前 (Pre-Flop)" : "翻後 (Post-Flop)";
-            reason.innerHTML = `<b>【GTO ${stageText} 數值分析】</b><br>在 ${sc.pot} BB 底池中面對 ${sc.betAmount} BB 下注，最佳動作為 <b>${sc.bestAction}</b>。`;
-
-            // 更新表格 EV
-            document.getElementById('ev-fold').innerText = `${sc.evMap.Fold > 0 ? '+' : ''}${sc.evMap.Fold} BB`;
-            document.getElementById('ev-call').innerText = `${sc.evMap.Call > 0 ? '+' : ''}${sc.evMap.Call} BB`;
-            document.getElementById('ev-raise').innerText = sc.evMap.Raise === -999.0 ? '不可用' : `${sc.evMap.Raise > 0 ? '+' : ''}${sc.evMap.Raise} BB`;
-
-            // 標亮最高 EV
-            ['fold', 'call', 'raise'].forEach(act => {
-                const actName = act.charAt(0).toUpperCase() + act.slice(1);
-                const el = document.getElementById(`ev-${act}`);
-                if (actName === sc.bestAction) {
-                    el.className = 'ev-highlight';
-                } else {
-                    el.className = '';
-                }
-            });
+            if (userAction === 'Fold') {
+                gs.isHandOver = true;
+                reason.innerHTML = `Hero 選擇棄牌，牌局結束。損失前述投入之底池。`;
+                nextBtn.innerText = "發下一手新牌 🎲";
+            } else if (currentMode === 'preflop' || gs.stage === 'river') {
+                gs.isHandOver = true;
+                reason.innerHTML = `<b>【攤牌對決 Showdown】</b><br>對手手牌：${gs.villainHand.map(c => c.r + c.s.symbol).join(' ')}<br>一手牌完整打完！`;
+                nextBtn.innerText = "發下一手新牌 🎲";
+            } else {
+                reason.innerHTML = `已完成 ${gs.stage.toUpperCase()} 街道決策，準備進入下一階段。`;
+                nextBtn.innerText = "進入下一街 (Next Street) ➡️";
+            }
 
             box.classList.add('show');
             document.getElementById('accuracy-val').innerText = `${Math.round((totalCorrect / totalPlayed) * 100)}%`;
         }
 
+        // 推進到下一街或下一手牌
+        function nextStepOrHand() {
+            if (gameState.isHandOver) {
+                startNewHand();
+            } else {
+                if (gameState.stage === 'preflop') gameState.stage = 'flop';
+                else if (gameState.stage === 'flop') gameState.stage = 'turn';
+                else if (gameState.stage === 'turn') gameState.stage = 'river';
+                
+                processStageStart();
+            }
+        }
+
         document.addEventListener("DOMContentLoaded", function() {
-            generateRandomScenario();
+            startNewHand();
         });
     </script>
 </body>
