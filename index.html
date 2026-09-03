@@ -2,231 +2,198 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GTO Wizard Style Poker Trainer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GTO Poker Trainer Ultimate</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0d1117">
+
     <style>
         :root {
-            --bg-dark: #0f172a;
-            --panel-bg: #1e293b;
-            --accent-blue: #3b82f6;
-            --accent-green: #10b981;
-            --accent-red: #ef4444;
-            --accent-yellow: #f59e0b;
-            --text-light: #f8fafc;
-            --text-muted: #94a3b8;
-            --border-color: #334155;
+            --bg-dark: #0d1117;
+            --panel-bg: #161b22;
+            --panel-border: #30363d;
+            --accent-blue: #2f81f7;
+            --accent-green: #238636;
+            --accent-red: #da3633;
+            --accent-yellow: #d29922;
+            --text-main: #f0f6fc;
+            --text-sub: #8b949e;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: var(--bg-dark); color: var(--text-light); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--bg-dark); color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; }
 
-        /* Header Navigation */
-        header { background: #090d16; border-bottom: 1px solid var(--border-color); padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; }
-        .logo { font-weight: 800; font-size: 1.2rem; color: var(--accent-blue); letter-spacing: 0.5px; }
-        .stats-bar { display: flex; gap: 20px; font-size: 0.9rem; }
-        .stat-item { background: var(--panel-bg); padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border-color); }
-        .stat-value { font-weight: bold; color: var(--accent-green); }
+        /* Top Bar */
+        header { background: #010409; border-bottom: 1px solid var(--panel-border); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .logo { font-weight: 800; font-size: 1.1rem; color: var(--accent-blue); display: flex; align-items: center; gap: 6px; }
+        .score-badge { background: var(--panel-bg); border: 1px solid var(--panel-border); padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; }
 
-        /* Main Workspace Layout */
-        .workspace { display: grid; grid-template-columns: 1fr 400px; flex: 1; height: calc(100vh - 57px); }
+        /* Main Container */
+        .app-container { display: flex; flex-direction: column; gap: 16px; padding: 12px; max-width: 800px; margin: 0 auto; width: 100%; }
 
-        /* Left Pane: Poker Table & Controls */
-        .game-pane { display: flex; flex-direction: column; justify-content: space-between; padding: 20px; position: relative; background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%); }
-
-        /* Poker Table Graphical Area */
-        .table-container { flex: 1; display: flex; justify-content: center; align-items: center; position: relative; }
-        .poker-table { width: 560px; height: 280px; background: #064e3b; border: 12px solid #065f46; border-radius: 150px; position: relative; box-shadow: inset 0 0 40px rgba(0,0,0,0.8), 0 10px 25px rgba(0,0,0,0.5); }
-        .pot-display { position: absolute; top: 32%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.6); padding: 6px 16px; border-radius: 20px; font-weight: bold; font-size: 0.95rem; border: 1px solid rgba(255,255,255,0.1); }
+        /* Table Graphical View */
+        .poker-table-wrapper { background: radial-gradient(circle, #1a4d2e 0%, #0d2818 100%); border: 8px solid #2d1810; border-radius: 120px; padding: 20px 10px; position: relative; min-height: 220px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; box-shadow: inset 0 0 20px rgba(0,0,0,0.8); }
         
-        .board-cards { position: absolute; top: 52%; left: 50%; transform: translate(-50%, -50%); display: flex; gap: 6px; }
-        .card { width: 44px; height: 62px; background: white; border-radius: 5px; color: #1e293b; display: flex; flex-direction: column; justify-content: space-between; padding: 4px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        .card.red { color: #dc2626; }
-        .card.empty { background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.2); }
-
-        /* Seat Positions */
-        .seat { position: absolute; width: 90px; background: var(--panel-bg); border: 2px solid var(--border-color); border-radius: 8px; padding: 6px; text-align: center; font-size: 0.8rem; }
-        .seat.active { border-color: var(--accent-blue); box-shadow: 0 0 12px rgba(59, 130, 246, 0.4); }
-        .seat-hero { bottom: -20px; left: 50%; transform: translateX(-50%); }
-        .seat-villain { top: -20px; left: 50%; transform: translateX(-50%); }
-        .hero-cards { display: flex; gap: 4px; justify-content: center; margin-top: 4px; }
-
-        /* Hero Hand Sizing & Action HUD */
-        .action-hud { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-        .rng-bar-wrap { display: flex; align-items: center; gap: 12px; font-size: 0.85rem; }
-        .rng-badge { background: #334155; padding: 4px 10px; border-radius: 4px; font-weight: bold; color: var(--accent-yellow); }
+        .pot-badge { background: rgba(0,0,0,0.75); color: #fff; padding: 4px 14px; border-radius: 12px; font-weight: bold; font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.15); }
         
-        .action-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-        .btn-action { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; transition: all 0.15s ease; font-size: 0.9rem; }
-        .btn-action:hover { filter: brightness(1.15); transform: translateY(-1px); }
-        .btn-fold { background: var(--accent-blue); }
-        .btn-check, .btn-call { background: var(--accent-green); }
-        .btn-bet { background: var(--accent-red); }
+        .community-cards { display: flex; gap: 6px; margin: 10px 0; }
+        .card { width: 40px; height: 56px; background: #fff; border-radius: 6px; color: #111; display: flex; flex-direction: column; justify-content: space-between; padding: 4px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 5px rgba(0,0,0,0.4); }
+        .card.red { color: #d32f2f; }
 
-        /* Right Pane: GTO Range Matrix & Feedback */
-        .analysis-pane { background: var(--panel-bg); border-left: 1px solid var(--border-color); padding: 20px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; }
-        .pane-title { font-weight: bold; font-size: 1rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .hero-area { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .position-tag { background: var(--accent-blue); color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+        .hero-hand { display: flex; gap: 6px; }
+
+        /* Mode Selector */
+        .selector-box { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 10px; padding: 10px; display: flex; gap: 8px; overflow-x: auto; }
+        .tab-btn { background: #21262d; border: 1px solid var(--panel-border); color: var(--text-sub); padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; white-space: nowrap; cursor: pointer; flex: 1; text-align: center; }
+        .tab-btn.active { background: var(--accent-blue); color: white; border-color: var(--accent-blue); }
+
+        /* Action Buttons Grid */
+        .action-controls { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .btn-act { padding: 16px; border: none; border-radius: 10px; font-size: 1rem; font-weight: bold; color: white; cursor: pointer; transition: transform 0.1s active; }
+        .btn-act:active { transform: scale(0.97); }
+        .btn-fold { background: #388bfd; }
+        .btn-check { background: #238636; }
+        .btn-bet-small { background: #d29922; }
+        .btn-bet-large { background: #da3633; }
+
+        /* Feedback Analysis Panel */
+        .analysis-box { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 12px; padding: 14px; display: none; flex-direction: column; gap: 10px; }
+        .analysis-box.show { display: flex; }
+        .result-title { font-weight: bold; font-size: 1.05rem; display: flex; align-items: center; gap: 8px; }
+        .result-title.correct { color: #3fb950; }
+        .result-title.wrong { color: #f85149; }
+        .reason-text { font-size: 0.9rem; line-height: 1.5; color: var(--text-main); }
+        .next-btn { background: var(--accent-blue); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer; margin-top: 6px; }
 
         /* 13x13 Grid Matrix */
-        .matrix-grid { display: grid; grid-template-columns: repeat(13, 1fr); gap: 2px; background: #0f172a; padding: 4px; border-radius: 6px; border: 1px solid var(--border-color); }
-        .matrix-cell { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: bold; border-radius: 2px; cursor: pointer; user-select: none; color: #fff; }
-
-        /* Feedback Modal/Card */
-        .feedback-card { background: #0f172a; border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; display: none; }
-        .feedback-card.show { display: block; }
-        .feedback-title { font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
-        .feedback-title.correct { color: var(--accent-green); }
-        .feedback-title.blunder { color: var(--accent-red); }
-        .ev-loss { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
-
-        .btn-next { width: 100%; padding: 12px; background: var(--accent-blue); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .matrix-section { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 12px; padding: 12px; }
+        .matrix-title { font-size: 0.85rem; font-weight: bold; color: var(--text-sub); margin-bottom: 8px; text-transform: uppercase; }
+        .grid-13x13 { display: grid; grid-template-columns: repeat(13, 1fr); gap: 2px; }
+        .cell { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 0.55rem; font-weight: bold; border-radius: 2px; color: #fff; background: #21262d; }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="logo">GTO TRAINER PRO</div>
-        <div class="stats-bar">
-            <div class="stat-item">Hand Score: <span class="stat-value" id="stat-score">100%</span></div>
-            <div class="stat-item">EV Loss: <span class="stat-value" id="stat-ev" style="color:#ef4444;">-0.00 EV</span></div>
-            <div class="stat-item">Hands Played: <span class="stat-value" id="stat-hands">0</span></div>
-        </div>
+        <div class="logo">♠️ GTO TRAINER PRO</div>
+        <div class="score-badge">正確率：<span id="accuracy-val" style="color:#3fb950;">100%</span></div>
     </header>
 
-    <div class="workspace">
-        <div class="game-pane">
-            <div class="table-container">
-                <div class="poker-table">
-                    <div class="seat seat-villain">
-                        <div>BTN (Villain)</div>
-                        <div style="color:var(--accent-green);">$100.00</div>
-                    </div>
+    <div class="app-container">
+        
+        <div class="selector-box">
+            <button class="tab-btn active" onclick="switchCategory('all')">🎲 全部情境</button>
+            <button class="tab-btn" onclick="switchCategory('preflop')">⚡ 翻前 3-Bet</button>
+            <button class="tab-btn" onclick="switchCategory('postflop')">🌊 翻後濕滑面</button>
+        </div>
 
-                    <div class="pot-display" id="pot-size">POT: 6.5 BB</div>
+        <div class="poker-table-wrapper">
+            <div class="pot-badge" id="pot-display">底池: 6.5 BB</div>
 
-                    <div class="board-cards" id="board-cards">
-                        </div>
-
-                    <div class="seat seat-hero active">
-                        <div>BB (Hero)</div>
-                        <div style="color:var(--accent-green);" id="hero-stack">$97.50</div>
-                        <div class="hero-cards" id="hero-cards">
-                            </div>
-                    </div>
+            <div class="community-cards" id="board-display">
                 </div>
-            </div>
 
-            <div class="action-hud">
-                <div class="rng-bar-wrap">
-                    <span>RNG Generator:</span>
-                    <span class="rng-badge" id="rng-value">64</span>
-                    <span style="color:var(--text-muted); font-size:0.8rem;">(Use to balance mixed GTO strategies)</span>
-                </div>
-                <div class="action-buttons" id="action-buttons">
+            <div class="hero-area">
+                <span class="position-tag" id="hero-pos">BTN (Hero)</span>
+                <div class="hero-hand" id="hero-hand-display">
                     </div>
             </div>
         </div>
 
-        <div class="analysis-pane">
-            <div>
-                <div class="pane-title" style="margin-bottom:10px;">GTO Strategy Range Matrix</div>
-                <div class="matrix-grid" id="matrix-grid">
-                    </div>
+        <div class="action-controls" id="action-controls">
             </div>
 
-            <div class="feedback-card" id="feedback-card">
-                <div class="feedback-title" id="feedback-title">GTO Optimal Choice</div>
-                <div id="feedback-desc" style="font-size:0.9rem; line-height:1.4;"></div>
-                <div class="ev-loss" id="ev-loss-text">EV Loss: 0.00 BB</div>
-                <button class="btn-next" onclick="nextHand()">Next Spot ➔</button>
-            </div>
+        <div class="analysis-box" id="analysis-box">
+            <div class="result-title" id="result-title"></div>
+            <div class="reason-text" id="reason-text"></div>
+            <button class="next-btn" onclick="loadNextHand()">下一手牌 ➔</button>
         </div>
+
+        <div class="matrix-section">
+            <div class="matrix-title">GTO 範圍矩陣參考 (13x13)</div>
+            <div class="grid-13x13" id="matrix-grid"></div>
+        </div>
+
     </div>
 
     <script>
-        // Hand Combos & Ranks Definition
         const ranks = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
-        const suits = [
-            { code: 's', symbol: '♠', red: false },
-            { code: 'h', symbol: '♥', red: true },
-            { code: 'd', symbol: '♦', red: true },
-            { code: 'c', symbol: '♣', red: false }
-        ];
+        const suits = {
+            s: { symbol: '♠', red: false },
+            h: { symbol: '♥', red: true },
+            d: { symbol: '♦', red: true },
+            c: { symbol: '♣', red: false }
+        };
 
-        // Sample Hand Spot Solutions
-        const scenarios = [
+        // 題目庫：包含翻前 3-Bet、水溝面應對、過度詐唬過濾等實戰牌局
+        const questions = [
             {
-                spotName: "BB vs BTN Single Raised Pot (Flop Decision)",
-                heroHand: { r1: 'A', r2: 'K', s1: suits[0], s2: suits[1] },
-                board: [
-                    { r: 'A', s: suits[2] },
-                    { r: '8', s: suits[1] },
-                    { r: '4', s: suits[3] }
-                ],
-                pot: "6.5 BB",
+                category: "preflop",
+                pos: "BTN vs CO Open",
+                pot: "3.5 BB",
+                heroHand: [ { r: 'A', s: suits.d }, { r: '5', s: suits.d } ],
+                board: [],
                 actions: [
-                    { name: "Check", gtoFreq: 78, type: "check", ev: 0 },
-                    { name: "Bet 33%", gtoFreq: 22, type: "bet", ev: -0.05 },
-                    { name: "Bet 75%", gtoFreq: 0, type: "bet", ev: -0.42 }
+                    { label: "跟注 (Call)", type: "btn-check", gto: false, ev: "-0.15 BB" },
+                    { label: "3-Bet 詐唬", type: "btn-bet-large", gto: true, ev: "+0.35 BB" },
+                    { label: "棄牌 (Fold)", type: "btn-fold", gto: false, ev: "0.00 BB" }
                 ],
-                recommended: "Check",
-                reason: "On A-8-4 rainbow as Out of Position BB in SRP, GTO prefers checking top pair top kicker (AK) at high frequency to protect checking range."
+                reason: "<b>建議 3-Bet！</b> A5s 是極佳的翻前半詐唬 3-Bet 手牌。持有 A 能產生阻擋效應（降低對手持有 AA/AK 的機率），且具備強大的抽堅果同花與順子潛力。"
             },
             {
-                spotName: "BTN vs BB Single Raised Pot (Monotone Flop)",
-                heroHand: { r1: 'K', r2: 'Q', s1: suits[0], s2: suits[0] },
-                board: [
-                    { r: 'J', s: suits[1] },
-                    { r: '8', s: suits[1] },
-                    { r: '2', s: suits[1] }
-                ],
-                pot: "5.5 BB",
+                category: "postflop",
+                pos: "BTN vs BB (3-Bet Pot)",
+                pot: "18.5 BB",
+                heroHand: [ { r: 'K', s: suits.h }, { r: 'K', s: suits.c } ],
+                board: [ { r: '6', s: suits.d }, { r: 'A', s: suits.d }, { r: '10', s: suits.d }, { r: '9', s: suits.s } ],
                 actions: [
-                    { name: "Check", gtoFreq: 85, type: "check", ev: 0 },
-                    { name: "Bet 33%", gtoFreq: 15, type: "bet", ev: -0.12 },
-                    { name: "Fold", gtoFreq: 0, type: "fold", ev: -1.20 }
+                    { label: "跟注全押 (Call Jam)", type: "btn-bet-large", gto: false, ev: "-8.50 BB" },
+                    { label: "棄牌 (Fold)", type: "btn-fold", gto: true, ev: "0.00 BB" }
                 ],
-                recommended: "Check",
-                reason: "On a monotone (3-heart) board without holding a heart blocker, KQo must check back to control pot size against check-raises."
+                reason: "<b>果斷棄牌！</b> 牌面為單色水溝面（3張方塊）且帶 A，對方在轉牌重砲 Jam 代表極強範圍（同花/堅果聽牌/兩對）。你手中的 KK 沒有任何一張方塊阻擋牌，已經完全沒有勝率與 Out 牌。"
+            },
+            {
+                category: "postflop",
+                pos: "SB vs BTN (3-Bet Pot)",
+                pot: "25.15 BB",
+                heroHand: [ { r: 'A', s: suits.d }, { r: 'K', s: suits.s } ],
+                board: [ { r: '5', s: suits.d }, { r: '7', s: suits.s }, { r: '6', s: suits.h }, { r: '4', s: suits.h } ],
+                actions: [
+                    { label: "過牌 (Check)", type: "btn-check", gto: true, ev: "+0.10 BB" },
+                    { label: "重砲下注 (Bet 80%)", type: "btn-bet-large", gto: false, ev: "-4.20 BB" }
+                ],
+                reason: "<b>選擇 Check！</b> 牌面出現 4 連張順子面（4-5-6-7），你的 AK 完全沒有成牌，且缺乏 8 或 3 的阻擋牌。在此處重砲詐唬只會被強牌跟注，應避免過度詐唬。"
             }
         ];
 
-        let currentSpotIdx = 0;
-        let playedHands = 0;
-        let totalEvLoss = 0;
+        let currentIdx = 0;
+        let totalPlayed = 0;
+        let totalCorrect = 0;
+        let currentFilter = 'all';
 
-        // Initialize 13x13 Grid Matrix
-        function renderMatrix() {
+        // 初始化 13x13 矩陣
+        function initMatrix() {
             const grid = document.getElementById('matrix-grid');
             grid.innerHTML = '';
-            
             for (let i = 0; i < 13; i++) {
                 for (let j = 0; j < 13; j++) {
                     const cell = document.createElement('div');
-                    cell.className = 'matrix-cell';
-                    
-                    let handStr = "";
-                    if (i < j) handStr = ranks[i] + ranks[j] + "s";
-                    else if (i > j) handStr = ranks[j] + ranks[i] + "o";
-                    else handStr = ranks[i] + ranks[j];
-
-                    cell.innerText = handStr;
-                    
-                    // Style Matrix mock colors
-                    if (i === j || (i < 3 && j < 3)) {
-                        cell.style.background = "var(--accent-red)";
-                    } else if (i < 5 && j < 5) {
-                        cell.style.background = "var(--accent-green)";
-                    } else {
-                        cell.style.background = "var(--accent-blue)";
-                    }
-
+                    cell.className = 'cell';
+                    let str = (i < j) ? ranks[i]+ranks[j]+"s" : (i > j) ? ranks[j]+ranks[i]+"o" : ranks[i]+ranks[j];
+                    cell.innerText = str;
+                    if (i === j || (i < 3 && j < 3)) cell.style.background = '#da3633';
+                    else if (i < 5 && j < 5) cell.style.background = '#238636';
+                    else cell.style.background = '#2f81f7';
                     grid.appendChild(cell);
                 }
             }
         }
 
-        // Render Cards Graphical Components
-        function renderCardHTML(card) {
+        function renderCard(card) {
             const isRed = card.s.red ? 'red' : '';
             return `<div class="card ${isRed}">
                 <div>${card.r}</div>
@@ -234,81 +201,77 @@
             </div>`;
         }
 
-        // Load Active Game Spot
-        function loadSpot(idx) {
-            const spot = scenarios[idx];
-            document.getElementById('pot-size').innerText = `POT: ${spot.pot}`;
-            
-            // Render Board
-            const boardElem = document.getElementById('board-cards');
-            boardElem.innerHTML = spot.board.map(c => renderCardHTML(c)).join('');
-            
-            // Render Hero Hand
-            const heroElem = document.getElementById('hero-cards');
-            heroElem.innerHTML = renderCardHTML({ r: spot.heroHand.r1, s: spot.heroHand.s1 }) + 
-                                 renderCardHTML({ r: spot.heroHand.r2, s: spot.heroHand.s2 });
+        function loadQuestion(idx) {
+            const q = questions[idx];
+            document.getElementById('pot-display').innerText = `底池: ${q.pot}`;
+            document.getElementById('hero-pos').innerText = q.pos;
 
-            // Randomize RNG
-            document.getElementById('rng-value').innerText = Math.floor(Math.random() * 100) + 1;
+            // 渲染公共牌
+            const boardBox = document.getElementById('board-display');
+            boardBox.innerHTML = q.board.length > 0 ? q.board.map(c => renderCard(c)).join('') : '<span style="color:var(--text-sub); font-size:0.85rem;">(翻前階段 - 無公共牌)</span>';
 
-            // Render Actions
-            const btnElem = document.getElementById('action-buttons');
-            btnElem.innerHTML = '';
-            
-            spot.actions.forEach(act => {
+            // 渲染手牌
+            const heroBox = document.getElementById('hero-hand-display');
+            heroBox.innerHTML = q.heroHand.map(c => renderCard(c)).join('');
+
+            // 渲染控制按鈕
+            const btnBox = document.getElementById('action-controls');
+            btnBox.innerHTML = '';
+            q.actions.forEach(act => {
                 const btn = document.createElement('button');
-                let cssClass = "btn-action ";
-                if (act.type === 'fold') cssClass += 'btn-fold';
-                else if (act.type === 'check' || act.type === 'call') cssClass += 'btn-check';
-                else cssClass += 'btn-bet';
-
-                btn.className = cssClass;
-                btn.innerText = act.name;
-                btn.onclick = () => handleUserAction(act, spot);
-                btnElem.appendChild(btn);
+                btn.className = `btn-act ${act.type}`;
+                btn.innerText = act.label;
+                btn.onclick = () => checkAnswer(act, q);
+                btnBox.appendChild(btn);
             });
 
-            // Hide Feedback
-            document.getElementById('feedback-card').classList.remove('show');
+            document.getElementById('analysis-box').classList.remove('show');
         }
 
-        // Action Evaluator
-        function handleUserAction(selectedAct, spot) {
-            playedHands++;
-            const feedbackCard = document.getElementById('feedback-card');
-            const feedbackTitle = document.getElementById('feedback-title');
-            const feedbackDesc = document.getElementById('feedback-desc');
-            const evText = document.getElementById('ev-loss-text');
+        function checkAnswer(act, q) {
+            totalPlayed++;
+            const box = document.getElementById('analysis-box');
+            const title = document.getElementById('result-title');
+            const reason = document.getElementById('reason-text');
 
-            const isBest = selectedAct.name === spot.recommended;
-            
-            if (isBest || selectedAct.gtoFreq > 0) {
-                feedbackTitle.className = "feedback-title correct";
-                feedbackTitle.innerText = "✓ Correct GTO Action";
+            if (act.gto) {
+                totalCorrect++;
+                title.className = "result-title correct";
+                title.innerHTML = "✓ 正確的 GTO 決策！";
             } else {
-                feedbackTitle.className = "feedback-title blunder";
-                feedbackTitle.innerText = "✕ Blunder / Inaccurate Action";
-                totalEvLoss += Math.abs(selectedAct.ev);
+                title.className = "result-title wrong";
+                title.innerHTML = `✕ 決策偏差 (EV 期望值：${act.ev})`;
             }
 
-            feedbackDesc.innerText = spot.reason;
-            evText.innerText = `EV Impact: ${selectedAct.ev >= 0 ? '+0.00' : selectedAct.ev} BB | GTO Frequency: ${selectedAct.gtoFreq}%`;
+            reason.innerHTML = q.reason;
+            box.classList.add('show');
 
-            feedbackCard.classList.add('show');
-
-            // Update Header Stats
-            document.getElementById('stat-hands').innerText = playedHands;
-            document.getElementById('stat-ev').innerText = `-${totalEvLoss.toFixed(2)} EV`;
+            // 更新正確率
+            const acc = Math.round((totalCorrect / totalPlayed) * 100);
+            document.getElementById('accuracy-val').innerText = `${acc}%`;
         }
 
-        function nextHand() {
-            currentSpotIdx = (currentSpotIdx + 1) % scenarios.length;
-            loadSpot(currentSpotIdx);
+        function loadNextHand() {
+            currentIdx = (currentIdx + 1) % questions.length;
+            loadQuestion(currentIdx);
         }
 
-        // Initialize App
-        renderMatrix();
-        loadSpot(0);
+        function switchCategory(cat) {
+            currentFilter = cat;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // 找到該類別的第一題
+            const foundIdx = questions.findIndex(q => cat === 'all' || q.category === cat);
+            if (foundIdx !== -1) {
+                currentIdx = foundIdx;
+                loadQuestion(currentIdx);
+            }
+        }
+
+        // 啟動
+        initMatrix();
+        loadQuestion(0);
     </script>
 </body>
 </html>
