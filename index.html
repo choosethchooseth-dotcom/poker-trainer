@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>6-Max GTO 隨機發牌模擬器</title>
+    <title>6-Max GTO 隨機發牌模擬器 (含 EV 計算)</title>
     <style>
         :root {
             --bg-dark: #0d1117;
@@ -109,18 +109,25 @@
         .btn-call { background: #d29922; }
         .btn-raise { background: #da3633; }
 
-        .analysis-box { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 8px; padding: 12px; display: none; flex-direction: column; gap: 6px; margin-top: 10px; }
+        .analysis-box { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 8px; padding: 12px; display: none; flex-direction: column; gap: 8px; margin-top: 10px; }
         .analysis-box.show { display: flex; }
         .result-title { font-weight: bold; font-size: 0.95rem; }
         .result-title.correct { color: #3fb950; }
         .result-title.wrong { color: #f85149; }
-        .next-btn { background: var(--accent-blue); color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 4px; }
+
+        /* EV 比較表格 */
+        .ev-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 0.82rem; }
+        .ev-table th, .ev-table td { border: 1px solid var(--panel-border); padding: 6px; text-align: center; }
+        .ev-table th { background: #21262d; color: var(--text-sub); }
+        .ev-highlight { color: #3fb950; font-weight: bold; }
+
+        .next-btn { background: var(--accent-blue); color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 6px; }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="logo">🎲 6-Max GTO 訓練器</div>
+        <div class="logo">🎲 6-Max GTO 訓練器 (含 EV)</div>
         <div class="score-badge">正確率：<span id="accuracy-val" style="color:#3fb950;">100%</span></div>
     </header>
 
@@ -161,6 +168,26 @@
         <div class="analysis-box" id="analysis-box">
             <div class="result-title" id="result-title"></div>
             <div id="reason-text" style="font-size:0.85rem; line-height:1.4; color:#c9d1d9;"></div>
+            
+            <table class="ev-table">
+                <thead>
+                    <tr>
+                        <th>動作</th>
+                        <th>棄牌 (Fold)</th>
+                        <th>跟注 (Call)</th>
+                        <th>加注 (Raise)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><b>期望值 (EV)</b></td>
+                        <td id="ev-fold">0.00 BB</td>
+                        <td id="ev-call">0.00 BB</td>
+                        <td id="ev-raise">0.00 BB</td>
+                    </tr>
+                </tbody>
+            </table>
+
             <button class="next-btn" onclick="generateRandomScenario()">生成下一手牌局 🎲</button>
         </div>
 
@@ -178,7 +205,7 @@
         const rankValues = { '2':2, '3':3, '4':4, '5':5, '6':6, '7':7, '8':8, '9':9, '10':10, 'J':11, 'Q':12, 'K':13, 'A':14 };
         const positions = ['utg', 'hj', 'co', 'btn', 'sb', 'bb'];
 
-        let currentMode = 'all'; // 'all' 或 'preflop'
+        let currentMode = 'all';
         let currentScenario = null;
         let totalPlayed = 0;
         let totalCorrect = 0;
@@ -202,7 +229,6 @@
 
                 const heroHand = [deck.pop(), deck.pop()];
                 
-                // 決定公共牌數量
                 let boardCount = 0;
                 if (currentMode === 'all') {
                     boardCount = [0, 3, 4, 5][Math.floor(Math.random() * 4)];
@@ -219,24 +245,21 @@
                     villainPos = positions[Math.floor(Math.random() * positions.length)];
                 }
 
-                // 計算包含小盲(0.5BB)與大盲(1BB)的底池
                 let basePot = 1.5; 
                 let betAmount = 0;
                 let isAllIn = false;
 
                 if (boardCount === 0) {
-                    // 翻前模式/翻前情境下注 logic
                     const rand = Math.random();
                     if (rand < 0.5) {
-                        betAmount = 2.5; // 標準 RFI
+                        betAmount = 2.5;
                     } else if (rand < 0.85) {
-                        betAmount = 7.5; // 3-Bet
+                        betAmount = 7.5;
                     } else {
-                        betAmount = 20.0; // 4-Bet / All-in
+                        betAmount = 20.0;
                         isAllIn = true;
                     }
                 } else {
-                    // 翻後模式下注 logic
                     const potAdd = (Math.floor(Math.random() * 30) + 2) * 0.5;
                     basePot += potAdd;
                     const betType = Math.random();
@@ -250,10 +273,16 @@
                     }
                 }
 
-                const pot = (basePot + parseFloat(betAmount)).toFixed(1);
-                const bestAction = evaluateGTO(heroHand, board, isAllIn, heroPos);
+                const pot = parseFloat((basePot + parseFloat(betAmount)).toFixed(1));
+                const evMap = calculateEV(heroHand, board, isAllIn, heroPos, pot, parseFloat(betAmount));
 
-                currentScenario = { heroPos, villainPos, pot, betAmount, isAllIn, heroHand, board, bestAction };
+                // 決定最佳決策（取最高 EV 者）
+                let bestAction = "Fold";
+                if (evMap.Call >= evMap.Fold && evMap.Call >= evMap.Raise) bestAction = "Call";
+                if (evMap.Raise >= evMap.Fold && evMap.Raise >= evMap.Call) bestAction = "Raise";
+                if (evMap.Fold > evMap.Call && evMap.Fold > evMap.Raise) bestAction = "Fold";
+
+                currentScenario = { heroPos, villainPos, pot, betAmount, isAllIn, heroHand, board, bestAction, evMap };
                 renderUI(currentScenario);
             } catch (e) {
                 console.error("生成牌局失敗:", e);
@@ -261,34 +290,31 @@
             }
         }
 
-        function evaluateGTO(hand, board, isAllIn, heroPos) {
-            if (!hand || hand.length < 2) return "Fold";
-
+        /* 算牌與 EV 動態計算引擎 */
+        function calculateEV(hand, board, isAllIn, heroPos, pot, betAmount) {
             const h1 = rankValues[hand[0].r] || 2;
             const h2 = rankValues[hand[1].r] || 2;
             const isPair = h1 === h2;
             const highCard = Math.max(h1, h2);
+            
+            // 估算估值權重 (0.00 ~ 1.00)
+            let equity = (highCard / 14) * 0.45;
+            if (isPair) equity += 0.35;
+            if (hand[0].s.code === hand[1].s.code) equity += 0.08;
+
+            const evFold = 0.0; // 棄牌基準 EV 設為 0
+            let evCall = (equity * pot) - ((1 - equity) * betAmount);
+            let evRaise = (equity * (pot + betAmount * 2)) - ((1 - equity) * betAmount * 2.5);
 
             if (isAllIn) {
-                if (isPair && highCard >= 11) return "Call";
-                if (highCard === 14 && Math.min(h1, h2) >= 13) return "Call";
-                return "Fold";
+                evRaise = -999.0; // 面對 All-in 無法 Raise
             }
 
-            if (!board || board.length === 0) {
-                // 翻前 GTO 判斷
-                if (isPair && highCard >= 8) return "Raise";
-                if (highCard >= 13 && Math.min(h1, h2) >= 10) return "Raise";
-                if (heroPos === 'bb' && highCard >= 10) return "Call";
-                if (heroPos === 'sb' && highCard >= 11) return "Call";
-                if (highCard >= 11) return "Call";
-                return "Fold";
-            } else {
-                // 翻後 GTO 判斷
-                if (isPair && highCard >= 12) return "Raise";
-                if (highCard >= 13) return "Call";
-                return "Fold";
-            }
+            return {
+                Fold: parseFloat(evFold.toFixed(2)),
+                Call: parseFloat(evCall.toFixed(2)),
+                Raise: parseFloat(evRaise.toFixed(2))
+            };
         }
 
         function renderCard(card) {
@@ -301,7 +327,6 @@
         }
 
         function renderUI(sc) {
-            // 重置所有座位狀態
             positions.forEach(p => {
                 const seat = document.getElementById(`seat-${p}`);
                 if (seat) seat.className = `seat pos-${p}`;
@@ -313,7 +338,6 @@
                 }
             });
 
-            // 標示 SB 與 BB 盲注標籤
             const sbBubble = document.getElementById('bubble-sb');
             const bbBubble = document.getElementById('bubble-bb');
             
@@ -326,14 +350,12 @@
                 bbBubble.classList.add('show', 'blind');
             }
 
-            // 高亮 Hero 與 Villain 座位
             const heroSeat = document.getElementById(`seat-${sc.heroPos}`);
             if (heroSeat) heroSeat.classList.add('hero');
 
             const villainSeat = document.getElementById(`seat-${sc.villainPos}`);
             if (villainSeat) villainSeat.classList.add('villain');
 
-            // 顯示對手動作 bubble
             const vBubble = document.getElementById(`bubble-${sc.villainPos}`);
             if (vBubble) {
                 vBubble.innerText = sc.isAllIn ? `下注 ${sc.betAmount} BB [全押]` : `下注 ${sc.betAmount} BB`;
@@ -381,16 +403,32 @@
             if (userAction === sc.bestAction) {
                 totalCorrect++;
                 title.className = "result-title correct";
-                title.innerHTML = "✓ 正確的 GTO 決策！";
+                title.innerHTML = `✓ 正確的 GTO 決策！(最高 EV: ${sc.evMap[sc.bestAction]} BB)`;
             } else {
                 title.className = "result-title wrong";
-                title.innerHTML = `✕ 決策偏差！建議選擇：${sc.bestAction}`;
+                title.innerHTML = `✕ 決策偏差！建議選擇：${sc.bestAction} (最高 EV: ${sc.evMap[sc.bestAction]} BB)`;
             }
 
             const stageText = sc.board.length === 0 ? "翻前 (Pre-Flop)" : "翻後 (Post-Flop)";
-            reason.innerHTML = `<b>【GTO ${stageText} 分析】</b><br>在包含盲注共 ${sc.pot} BB 的底池中，面對對手 (${sc.villainPos.toUpperCase()}) 的 ${sc.betAmount} BB 動作，Hero (${sc.heroPos.toUpperCase()}) 手牌的最佳策略為 <b>${sc.bestAction}</b>。`;
-            box.classList.add('show');
+            reason.innerHTML = `<b>【GTO ${stageText} 數值分析】</b><br>在 ${sc.pot} BB 底池中面對 ${sc.betAmount} BB 下注，最佳動作為 <b>${sc.bestAction}</b>。`;
 
+            // 更新表格 EV
+            document.getElementById('ev-fold').innerText = `${sc.evMap.Fold > 0 ? '+' : ''}${sc.evMap.Fold} BB`;
+            document.getElementById('ev-call').innerText = `${sc.evMap.Call > 0 ? '+' : ''}${sc.evMap.Call} BB`;
+            document.getElementById('ev-raise').innerText = sc.evMap.Raise === -999.0 ? '不可用' : `${sc.evMap.Raise > 0 ? '+' : ''}${sc.evMap.Raise} BB`;
+
+            // 標亮最高 EV
+            ['fold', 'call', 'raise'].forEach(act => {
+                const actName = act.charAt(0).toUpperCase() + act.slice(1);
+                const el = document.getElementById(`ev-${act}`);
+                if (actName === sc.bestAction) {
+                    el.className = 'ev-highlight';
+                } else {
+                    el.className = '';
+                }
+            });
+
+            box.classList.add('show');
             document.getElementById('accuracy-val').innerText = `${Math.round((totalCorrect / totalPlayed) * 100)}%`;
         }
 
