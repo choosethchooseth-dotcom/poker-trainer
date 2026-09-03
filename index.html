@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>6-Max GTO Poker Trainer</title>
+    <title>6-Max GTO Infinite Random Trainer</title>
     <style>
         :root {
             --bg-dark: #0d1117;
@@ -18,81 +18,104 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { background-color: var(--bg-dark); color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; }
+        body { background-color: var(--bg-dark); color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh; }
 
-        header { background: #010409; border-bottom: 1px solid var(--panel-border); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
-        .logo { font-weight: 800; font-size: 1.1rem; color: var(--accent-blue); }
+        header { background: #010409; border-bottom: 1px solid var(--panel-border); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-weight: 800; font-size: 1rem; color: var(--accent-blue); }
         .score-badge { background: var(--panel-bg); border: 1px solid var(--panel-border); padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; }
 
-        .app-container { display: flex; flex-direction: column; gap: 14px; padding: 12px; max-width: 800px; margin: 0 auto; width: 100%; }
+        .app-container { display: flex; flex-direction: column; gap: 12px; padding: 12px; max-width: 600px; margin: 0 auto; width: 100%; }
 
-        /* 6-Max 完整牌桌 */
+        /* 擬真 6-Max 牌桌 */
         .table-area {
             background: radial-gradient(circle, #1a4d2e 0%, #082113 100%);
-            border: 10px solid #2d1810;
-            border-radius: 120px;
+            border: 8px solid #2d1810;
+            border-radius: 100px;
             position: relative;
-            height: 280px;
-            margin: 10px 0;
+            height: 290px;
+            margin: 6px 0;
             display: flex;
             justify-content: center;
             align-items: center;
             box-shadow: inset 0 0 25px rgba(0,0,0,0.9);
         }
 
-        /* 6 個位置標籤佈局 */
+        /* 座位 */
         .seat {
             position: absolute;
-            background: rgba(22, 27, 34, 0.85);
+            background: rgba(22, 27, 34, 0.9);
             border: 1px solid var(--panel-border);
-            border-radius: 8px;
-            padding: 4px 8px;
-            font-size: 0.75rem;
+            border-radius: 6px;
+            padding: 3px 6px;
+            font-size: 0.72rem;
             text-align: center;
             color: var(--text-sub);
-            width: 70px;
+            width: 68px;
+            z-index: 2;
         }
-        .seat.active-villain { border-color: var(--accent-red); color: #fff; background: rgba(218, 54, 51, 0.2); }
-        .seat.active-hero { border-color: var(--accent-blue); color: #fff; background: rgba(47, 129, 247, 0.2); box-shadow: 0 0 10px rgba(47, 129, 247, 0.5); }
-        .dealer-chip { background: #fff; color: #000; font-weight: bold; border-radius: 50%; padding: 1px 4px; font-size: 0.65rem; margin-left: 2px; }
+        .seat.hero { border-color: var(--accent-blue); color: #fff; background: rgba(47, 129, 247, 0.25); box-shadow: 0 0 8px rgba(47, 129, 247, 0.4); }
+        .seat.villain { border-color: var(--accent-red); color: #fff; background: rgba(218, 54, 51, 0.25); }
 
-        /* 位置座標 (6-Max) */
-        .pos-utg { top: 10px; left: 15%; }
-        .pos-hj  { top: 10px; right: 15%; }
-        .pos-co  { top: 42%; right: 5px; }
-        .pos-btn { bottom: 10px; right: 15%; }
-        .pos-sb  { bottom: 10px; left: 15%; }
-        .pos-bb  { top: 42%; left: 5px; }
+        .pos-utg { top: 10px; left: 16%; }
+        .pos-hj  { top: 10px; right: 16%; }
+        .pos-co  { top: 40%; right: 4px; }
+        .pos-btn { bottom: 10px; right: 16%; }
+        .pos-sb  { bottom: 10px; left: 16%; }
+        .pos-bb  { top: 40%; left: 4px; }
 
-        .center-pot { position: absolute; top: 32%; background: rgba(0,0,0,0.7); padding: 4px 12px; border-radius: 12px; font-size: 0.85rem; font-weight: bold; border: 1px solid rgba(255,255,255,0.1); }
-        .community-cards { position: absolute; top: 50%; display: flex; gap: 4px; }
+        /* 下注動作標籤 */
+        .bet-bubble {
+            position: absolute;
+            background: #fff;
+            color: #000;
+            font-weight: bold;
+            font-size: 0.68rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+            display: none;
+            z-index: 4;
+            white-space: nowrap;
+        }
+        .bet-bubble.show { display: block; }
+        .bet-bubble.allin { background: #da3633; color: #fff; }
 
-        .card { width: 36px; height: 50px; background: #fff; border-radius: 4px; color: #111; display: flex; flex-direction: column; justify-content: space-between; padding: 3px; font-weight: bold; font-size: 0.8rem; box-shadow: 0 2px 4px rgba(0,0,0,0.4); }
+        .bubble-utg { top: 42px; left: 20%; }
+        .bubble-hj  { top: 42px; right: 20%; }
+        .bubble-co  { top: 40%; right: 76px; }
+        .bubble-btn { bottom: 42px; right: 20%; }
+        .bubble-sb  { bottom: 42px; left: 20%; }
+        .bubble-bb  { top: 40%; left: 76px; }
+
+        .center-pot { position: absolute; top: 28%; background: rgba(0,0,0,0.8); padding: 3px 10px; border-radius: 10px; font-size: 0.8rem; font-weight: bold; color: var(--accent-yellow); border: 1px solid rgba(255,255,255,0.1); }
+        .community-cards { position: absolute; top: 48%; display: flex; gap: 4px; }
+
+        /* 撲克牌 */
+        .card { width: 34px; height: 48px; background: #fff; border-radius: 4px; color: #111; display: flex; flex-direction: column; justify-content: space-between; padding: 2px 3px; font-weight: 800; font-size: 0.8rem; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
         .card.red { color: #d32f2f; }
 
-        /* Hero 手牌顯示 */
-        .hero-hand-container { display: flex; justify-content: center; gap: 6px; margin-top: -10px; }
+        .hero-section { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .hero-cards { display: flex; gap: 6px; }
 
-        /* 按鈕區 */
-        .action-controls { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        .btn-act { padding: 14px; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: bold; color: white; cursor: pointer; }
-        .btn-fold { background: #388bfd; }
+        .action-controls { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        .btn-act { padding: 12px; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: bold; color: white; cursor: pointer; }
+        .btn-fold { background: #2f81f7; }
         .btn-check { background: #238636; }
-        .btn-bet-small { background: #d29922; }
-        .btn-bet-large { background: #da3633; }
+        .btn-call { background: #d29922; }
+        .btn-raise { background: #da3633; }
 
-        .analysis-box { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 10px; padding: 12px; display: none; flex-direction: column; gap: 8px; }
+        .analysis-box { background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 8px; padding: 12px; display: none; flex-direction: column; gap: 6px; }
         .analysis-box.show { display: flex; }
-        .result-title { font-weight: bold; font-size: 1rem; }
+        .result-title { font-weight: bold; font-size: 0.95rem; }
         .result-title.correct { color: #3fb950; }
         .result-title.wrong { color: #f85149; }
-        .next-btn { background: var(--accent-blue); color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .next-btn { background: var(--accent-blue); color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 4px; }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="logo">♠️ 6-Max GTO Trainer</div>
+        <div class="logo">🎲 6-Max GTO 隨機發牌模擬器</div>
         <div class="score-badge">正確率：<span id="accuracy-val" style="color:#3fb950;">100%</span></div>
     </header>
 
@@ -101,152 +124,4 @@
         <div class="table-area">
             <div class="seat pos-utg" id="seat-utg">UTG</div>
             <div class="seat pos-hj"  id="seat-hj">HJ</div>
-            <div class="seat pos-co"  id="seat-co">CO</div>
-            <div class="seat pos-btn" id="seat-btn">BTN <span class="dealer-chip">D</span></div>
-            <div class="seat pos-sb"  id="seat-sb">SB</div>
-            <div class="seat pos-bb"  id="seat-bb">BB</div>
-
-            <div class="center-pot" id="pot-display">底池: 0 BB</div>
-            <div class="community-cards" id="board-display"></div>
-        </div>
-
-        <div style="text-align:center; font-size:0.8rem; color:var(--text-sub); margin-top:-5px;">Hero 手牌</div>
-        <div class="hero-hand-container" id="hero-hand-display"></div>
-
-        <div class="action-controls" id="action-controls"></div>
-
-        <div class="analysis-box" id="analysis-box">
-            <div class="result-title" id="result-title"></div>
-            <div id="reason-text" style="font-size:0.88rem; line-height:1.4;"></div>
-            <button class="next-btn" onclick="loadNextHand()">下一手牌 ➔</button>
-        </div>
-
-    </div>
-
-    <script>
-        const suits = {
-            s: { symbol: '♠', red: false },
-            h: { symbol: '♥', red: true },
-            d: { symbol: '♦', red: true },
-            c: { symbol: '♣', red: false }
-        };
-
-        // 多對手與不同位置情境題目庫
-        const scenarios = [
-            {
-                heroPos: "btn",
-                villainPos: "co",
-                pot: "3.5 BB",
-                heroHand: [ { r: 'A', s: suits.d }, { r: '5', s: suits.d } ],
-                board: [],
-                actions: [
-                    { label: "跟注 (Call)", type: "btn-check", gto: false, ev: "-0.15 BB" },
-                    { label: "3-Bet 詐唬 (to 7.5BB)", type: "btn-bet-large", gto: true, ev: "+0.35 BB" },
-                    { label: "棄牌 (Fold)", type: "btn-fold", gto: false, ev: "0.00 BB" }
-                ],
-                reason: "<b>BTN vs CO Open：</b> A5s 具備良好的 A Blocker，能阻擋 CO 的強牌（AA/AK），且翻牌後擁有極佳的同花與順子發展性，是非常優秀的 3-Bet 半詐唬手牌。"
-            },
-            {
-                heroPos: "bb",
-                villainPos: "sb",
-                pot: "18.5 BB",
-                heroHand: [ { r: 'K', s: suits.h }, { r: 'K', s: suits.c } ],
-                board: [ { r: '6', s: suits.d }, { r: 'A', s: suits.d }, { r: '10', s: suits.d }, { r: '9', s: suits.s } ],
-                actions: [
-                    { label: "跟注全押 (Call Jam)", type: "btn-bet-large", gto: false, ev: "-8.50 BB" },
-                    { label: "棄牌 (Fold)", type: "btn-fold", gto: true, ev: "0.00 BB" }
-                ],
-                reason: "<b>BB vs SB 轉牌面對 Jam：</b> 在 A-High 的單色水溝面上，對手發動大下注代表範圍內包含大量同花與兩對。手持沒有方塊阻擋牌的 KK 已經無勝率空間，必須棄牌。"
-            },
-            {
-                heroPos: "sb",
-                villainPos: "utg",
-                pot: "22.0 BB",
-                heroHand: [ { r: 'A', s: suits.d }, { r: 'K', s: suits.s } ],
-                board: [ { r: '5', s: suits.d }, { r: '7', s: suits.s }, { r: '6', s: suits.h }, { r: '4', s: suits.h } ],
-                actions: [
-                    { label: "過牌 (Check)", type: "btn-check", gto: true, ev: "+0.10 BB" },
-                    { label: "持續下注 (Bet 75%)", type: "btn-bet-large", gto: false, ev: "-3.80 BB" }
-                ],
-                reason: "<b>SB vs UTG 4連張濕滑面：</b> 牌面為 4-5-6-7 順子面，UTG 範圍對此牌面連結度高，且 Hero 手持 AK 無任何 8 或 3 的順子阻擋牌，在此處下注屬於過度詐唬。"
-            }
-        ];
-
-        let currentIdx = 0;
-        let totalPlayed = 0;
-        let totalCorrect = 0;
-
-        function renderCard(card) {
-            const isRed = card.s.red ? 'red' : '';
-            return `<div class="card ${isRed}">
-                <div>${card.r}</div>
-                <div style="align-self:flex-end;">${card.s.symbol}</div>
-            </div>`;
-        }
-
-        function loadScenario(idx) {
-            const sc = scenarios[idx];
-
-            // 重置所有座位高亮
-            ['utg', 'hj', 'co', 'btn', 'sb', 'bb'].forEach(p => {
-                const seat = document.getElementById(`seat-${p}`);
-                seat.className = `seat pos-${p}`;
-            });
-
-            // 標示 Hero 與 Villain 位置
-            document.getElementById(`seat-${sc.heroPos}`).classList.add('active-hero');
-            document.getElementById(`seat-${sc.villainPos}`).classList.add('active-villain');
-
-            document.getElementById('pot-display').innerText = `底池: ${sc.pot}`;
-
-            // 公共牌
-            const boardBox = document.getElementById('board-display');
-            boardBox.innerHTML = sc.board.length > 0 ? sc.board.map(c => renderCard(c)).join('') : '<span style="color:var(--text-sub); font-size:0.75rem;">(翻前)</span>';
-
-            // Hero 手牌
-            document.getElementById('hero-hand-display').innerHTML = sc.heroHand.map(c => renderCard(c)).join('');
-
-            // 按鈕
-            const btnBox = document.getElementById('action-controls');
-            btnBox.innerHTML = '';
-            sc.actions.forEach(act => {
-                const btn = document.createElement('button');
-                btn.className = `btn-act ${act.type}`;
-                btn.innerText = act.label;
-                btn.onclick = () => evaluate(act, sc);
-                btnBox.appendChild(btn);
-            });
-
-            document.getElementById('analysis-box').classList.remove('show');
-        }
-
-        function evaluate(act, sc) {
-            totalPlayed++;
-            const box = document.getElementById('analysis-box');
-            const title = document.getElementById('result-title');
-            const reason = document.getElementById('reason-text');
-
-            if (act.gto) {
-                totalCorrect++;
-                title.className = "result-title correct";
-                title.innerHTML = "✓ 正確的 GTO 決策！";
-            } else {
-                title.className = "result-title wrong";
-                title.innerHTML = `✕ 決策偏差 (EV 影響：${act.ev})`;
-            }
-
-            reason.innerHTML = sc.reason;
-            box.classList.add('show');
-
-            document.getElementById('accuracy-val').innerText = `${Math.round((totalCorrect / totalPlayed) * 100)}%`;
-        }
-
-        function loadNextHand() {
-            currentIdx = (currentIdx + 1) % scenarios.length;
-            loadScenario(currentIdx);
-        }
-
-        loadScenario(0);
-    </script>
-</body>
-</html>
+            <div class="seat pos
