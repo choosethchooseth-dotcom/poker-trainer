@@ -216,8 +216,8 @@
                 board: [],
                 stage: 'preflop',
                 pot: 1.5,
-                currentBet: 0,
-                toCall: 0,
+                currentBet: 1.0, // Preflop 預設最高注額為 1BB (BB盲注)
+                toCall: 1.0,
                 isHandOver: false,
                 lastActionText: ''
             };
@@ -228,8 +228,10 @@
         function processStageStart() {
             if (gameState.stage === 'flop' && gameState.board.length === 0) {
                 gameState.board.push(gameState.deck.pop(), gameState.deck.pop(), gameState.deck.pop());
+                gameState.currentBet = 0;
             } else if ((gameState.stage === 'turn' || gameState.stage === 'river') && gameState.board.length < (gameState.stage === 'turn' ? 4 : 5)) {
                 gameState.board.push(gameState.deck.pop());
+                gameState.currentBet = 0;
             }
 
             const villainAction = getAIAction(gameState);
@@ -243,13 +245,18 @@
             let addedToPot = 0;
             if (villainAction.targetBet > 0) {
                 addedToPot = Math.max(0, villainAction.targetBet - alreadyInvested);
-                gameState.toCall = villainAction.targetBet - (gameState.heroPos === 'bb' ? 1.0 : (gameState.heroPos === 'sb' ? 0.5 : 0));
-                if (gameState.toCall < 0) gameState.toCall = villainAction.targetBet;
+                
+                let heroInvested = 0;
+                if (gameState.stage === 'preflop') {
+                    if (gameState.heroPos === 'sb') heroInvested = 0.5;
+                    else if (gameState.heroPos === 'bb') heroInvested = 1.0;
+                }
+                gameState.toCall = Math.max(0, villainAction.targetBet - heroInvested);
             } else {
                 gameState.toCall = 0;
             }
 
-            gameState.currentBet = villainAction.targetBet;
+            gameState.currentBet = Math.max(gameState.currentBet, villainAction.targetBet);
             gameState.pot += addedToPot;
             gameState.villainLastAction = villainAction.type;
 
@@ -261,9 +268,9 @@
             if (gs.stage === 'preflop') {
                 if (rand < 0.5) return { type: 'Raise', targetBet: 2.5 };
                 if (rand < 0.8) return { type: '3-Bet', targetBet: 7.5 };
-                return { type: 'Check/Call', targetBet: 0 };
+                return { type: 'Fold / Pass', targetBet: 1.0 }; // 平跟或平靜過牌
             } else {
-                if (rand < 0.45) return { type: 'Check', targetBet: 0 };
+                if (rand < 0.5) return { type: 'Check', targetBet: 0 };
                 if (rand < 0.8) return { type: 'Bet', targetBet: parseFloat((gs.pot * 0.5).toFixed(1)) };
                 return { type: 'Overbet', targetBet: parseFloat((gs.pot * 1.2).toFixed(1)) };
             }
@@ -323,7 +330,11 @@
 
             const vBubble = document.getElementById(`bubble-${gs.villainPos}`);
             if (vBubble) {
-                vBubble.innerText = gs.currentBet > 0 ? `${gs.villainLastAction} ${gs.currentBet} BB` : `Check (看牌)`;
+                if (gs.stage === 'preflop' && gs.currentBet === 1.0) {
+                    vBubble.innerText = `Check / Limp 1BB`;
+                } else {
+                    vBubble.innerText = gs.currentBet > 0 ? `${gs.villainLastAction} ${gs.currentBet} BB` : `Check (看牌)`;
+                }
                 vBubble.classList.remove('blind');
                 vBubble.classList.add('show');
             }
@@ -341,8 +352,11 @@
             const btnBox = document.getElementById('action-controls');
             btnBox.innerHTML = '';
 
+            // 判斷能否免費 Check：只有在 (1) 非翻前且對手未下注，或是 (2) 翻前且 Hero 是 BB 位且無人 Raise 時才可以 Check
+            const canFreeCheck = (gs.stage !== 'preflop' && gs.currentBet === 0) || (gs.stage === 'preflop' && gs.heroPos === 'bb' && gs.currentBet <= 1.0);
+
             let actions = [];
-            if (gs.currentBet === 0) {
+            if (canFreeCheck) {
                 actions = [
                     { label: "看牌 (Check)", action: "Check", ev: evMap.Check, type: "btn-fold" },
                     { label: "下注 (Bet 2.5BB)", action: "Bet", ev: evMap.Bet, type: "btn-raise" }
